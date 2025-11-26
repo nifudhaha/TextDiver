@@ -29,7 +29,7 @@ This package provides comprehensive text analysis metrics organized into several
 
 ```bash
 # Install required packages
-pip install spacy sentence-transformers transformers torch numpy scikit-learn
+pip install sentence-transformers transformers torch numpy scikit-learn
 
 # Download stanza model
 pip install stanza
