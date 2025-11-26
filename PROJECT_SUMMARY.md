@@ -81,7 +81,7 @@ descriptor.save_results(results, "output.pkl")
 ## 🔧 Dependencies
 
 ### Core Libraries
-- **spaCy**: NLP processing (POS, NER, tokenization)
+- **stanza**: NLP processing (POS, NER, tokenization)
 - **SentenceTransformers**: Semantic embeddings
 - **HuggingFace Transformers**: Sentiment analysis
 - **NumPy**: Numerical computations
@@ -90,7 +90,6 @@ descriptor.save_results(results, "output.pkl")
 ### Installation
 ```bash
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm
 ```
 
 ##  Use Cases
