@@ -6,22 +6,22 @@ A Python toolkit for computing quantifiable text complexity and diversity metric
 
 This package provides comprehensive text analysis metrics organized into several categories:
 
-### 📊 Basic Statistics
+###  Basic Statistics
 - Sentence count
 - Token count  
 - Average sentence length
 
-### 🔢 Syntactic & Lexical Complexity
+###  Syntactic & Lexical Complexity
 - **Shannon's Entropy**: Measures vocabulary distribution uniformity
 - **POS Features**: Part-of-speech distribution (nouns, verbs, adjectives, etc.)
 - **Vocabulary Complexity**: Average number of POS tags per lemma
 - **Lexical Richness**: TTR, RTTR, CTTR metrics
 
-### 🎯 Semantic Features
+###  Semantic Features
 - **Embedding Variance**: Semantic diversity in sentence vector space
 - **Entity Specificity**: Named entity density (persons, organizations, locations)
 
-### 😊 Sentiment Analysis
+###  Sentiment Analysis
 - **Sentiment Variance**: Emotional fluctuation across sentences
 - **Sentiment Distribution**: Positive/negative/neutral ratios
 
@@ -201,12 +201,6 @@ This toolkit is designed for:
 - **HuggingFace Transformers** for sentiment analysis
 - All metrics are **directly computable** 
 
-## Limitations
-
-- Sentiment analysis uses a binary model (positive/negative)
-- Embedding variance depends on model choice
-- Entity recognition quality varies by text domain
-- Computationally intensive for very long texts
 
 ## References
 TBD
