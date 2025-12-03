@@ -6,6 +6,14 @@ A comprehensive Python package for analyzing text diversity, bias, and controver
 
 ---
 
+# ctrLLM
+
+**Controversial Topic Representation in LLM**
+
+A comprehensive Python package for analyzing text diversity, bias, and controversial topic representation in language models.
+
+---
+
 ## 🎯 Purpose
 
 This toolkit helps researchers and developers analyze how different sources (Wikipedia, Britannica, LLMs) represent controversial topics by measuring:
@@ -14,6 +22,7 @@ This toolkit helps researchers and developers analyze how different sources (Wik
 - **Perspective multiplexity** (multiple viewpoints)
 - **Bias detection** (single vs. multi-perspective)
 - **Content quality** (complexity, richness)
+- **Rule-based discourse framing** (balance, narrative roles, harm)
 
 ---
 
@@ -31,8 +40,9 @@ pip install -r requirements.txt
 # Download Stanza models
 python -c "import stanza; stanza.download('en')"
 
-# Set OpenAI API key for argument detection
+# Set OpenAI API key for LLM-based analysis
 export OPENAI_API_KEY='your-openai-api-key'
+
 ```
 
 ### Basic Usage
@@ -57,19 +67,22 @@ print_summary(results)
 
 ```
 ctrllm_package/
-├── ctrllm/                    # Main package
-│   ├── __init__.py           # Package initialization
-│   ├── metrics.py            # Main interface
-│   ├── syntactic.py          # Syntactic analysis
-│   ├── semantic.py           # Semantic analysis
-│   ├── entity.py             # Entity analysis
-│   ├── sentiment.py          # Sentiment analysis
-│   └── utils.py              # Utilities
-├── demo.py                    # Demo script
-├── test.py                    # Test suite
-├── requirements.txt           # Dependencies
-├── setup.py                   # Package setup
-└── README.md                  # This file
+├── ctrllm/
+│   ├── __init__.py
+│   ├── metrics.py
+│   ├── syntactic.py
+│   ├── semantic.py
+│   ├── entity.py
+│   ├── sentiment.py
+│   ├── argument.py
+│   ├── rule_based.py
+│   └── utils.py
+├── demo.py
+├── test.py
+├── requirements.txt
+├── setup.py
+└── README.md
+
 ```
 
 ---
@@ -94,18 +107,42 @@ ctrllm_package/
 - **Sentiment Variance** - Emotional variability
 - **Sentiment Distribution** - Positive/negative/neutral ratios
 
-### **Argument Analysis (`argument.py`)** ⭐ NEW
+### **Argument Analysis (`argument.py`)**
 - **Main vs. Fringe Perspective** - Main/fringe viewpoint ratio
 - **Argument Diversity** - Argument topic diversity  
 - **Argument Distinctness** - Cluster separation
 - **Argumentativeness** - Argument density
+- 
+### **Rule-Based Analysis (`rule_based.py`)** 
 
-**Uses LLM-based detection for high accuracy** (requires OpenAI API)
+A rule-based + LLM-assisted module for detecting higher-level discourse patterns not captured by syntactic or semantic metrics.
+
+#### **1. Balanced Pro/Con Detection**
+Identifies sentences that present **both pro and con viewpoints**, using LLM-based reasoning with contrastive patterns such as:
+
+- “Some argue X, while others believe Y.”
+- “On one hand A, on the other hand B.”
+- “Proponents support X, whereas opponents claim Y.”
+
+**Outputs:**
+- `balanced_ratio` — proportion of two-sided sentences  
+- `num_balanced_sentences` — count  
+- `balanced_sentences` — extracted examples  
+
+---
+
+#### **2. Narrative Roles Extraction**
+Classifies entities into narrative roles:
+
+- **Hero** — protagonist / positive agent  
+- **Villain** — antagonist / cause of harm  
+- **Victim** — harmed or disadvantaged groups  
+
+**Uses LLM-based detection** (requires OpenAI API)
 
 ### Utilities (`utils.py`)
 - **API Management** - Environment variables + explicit keys
 - **Save/Load** - Pickle serialization
-- **Print Summary** - Formatted output
 
 ---
 
@@ -158,11 +195,6 @@ print(f"Diversity: {arg_results['argument_diversity']['arg_diversity']:.3f}")
 ```bash
 python demo.py
 ```
-
-This will:
-1. Analyze a controversial topic text
-2. Show syntactic-only analysis
-3. Compare two texts (simple vs. complex)
 
 ---
 
