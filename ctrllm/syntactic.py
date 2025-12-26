@@ -7,6 +7,9 @@ import numpy as np
 from typing import List, Dict, Optional
 from collections import Counter
 import stanza
+from lexicalrichness import LexicalRichness
+from nltk.corpus import wordnet as wn
+import nltk
 
 
 class SyntacticAnalyzer:
@@ -16,11 +19,12 @@ class SyntacticAnalyzer:
     - Vocabulary complexity
     - Lexical richness
     - Shannon's entropy
+    - Polysemy (semantic ambiguity)
     """
     
     def __init__(self, lang: str = "en"):
         """
-        Initialize syntactic analyzer with Stanza.
+        Initialize syntactic analyzer with Stanza and WordNet.
         
         Args:
             lang: Language code (e.g., 'en', 'zh', 'es')
@@ -39,8 +43,18 @@ class SyntacticAnalyzer:
                 processors='tokenize,pos,lemma'
             )
         
+        # Download WordNet if not available
+        try:
+            wn.ensure_loaded()
+        except:
+            print("Downloading WordNet...")
+            nltk.download('wordnet')
+            nltk.download('omw-1.4')  # Open Multilingual WordNet
+        
         self.doc = None
         self.sentences = []
+        self.text = None
+        self.lang = lang
         
     def process_text(self, text: str):
         """
@@ -49,6 +63,7 @@ class SyntacticAnalyzer:
         Args:
             text: Input text to analyze
         """
+        self.text = text
         self.doc = self.nlp(text)
         self.sentences = [sent.text.strip() for sent in self.doc.sentences 
                          if sent.text.strip()]
@@ -195,45 +210,160 @@ class SyntacticAnalyzer:
             'lemmas_with_multiple_pos': sum(1 for c in pos_counts if c > 1)
         }
     
-    def lexical_richness(self) -> Dict[str, float]:
+    def polysemy(self) -> Dict[str, float]:
         """
-        Calculate lexical richness metrics (TTR, RTTR, CTTR).
+        Calculate polysemy using WordNet synsets.
+        Formula: Polysemy = (1/#lemmas) Σ synset_count(ℓ)
+        
+        Polysemy measures semantic ambiguity - how many different meanings
+        each word can have on average.
         
         Returns:
-            Dictionary with richness metrics
+            Dictionary with polysemy metrics
         """
         if self.doc is None:
             raise ValueError("No document processed. Call process_text() first.")
         
-        tokens = []
+        # Map Stanza POS to WordNet POS
+        pos_map = {
+            'NOUN': wn.NOUN,
+            'VERB': wn.VERB,
+            'ADJ': wn.ADJ,
+            'ADV': wn.ADV,
+            'PROPN': wn.NOUN  # Proper nouns treated as nouns
+        }
+        
+        lemma_synsets = []
+        lemma_details = []
+        
         for sent in self.doc.sentences:
             for word in sent.words:
-                if word.upos not in ['PUNCT', 'SYM', 'X'] and word.text.isalpha():
-                    tokens.append(word.text.lower())
+                # Only consider content words with WordNet POS
+                if word.upos in pos_map:
+                    lemma = word.lemma.lower()
+                    wn_pos = pos_map[word.upos]
+                    
+                    # Get synsets for this lemma with its POS
+                    synsets = wn.synsets(lemma, pos=wn_pos)
+                    synset_count = len(synsets)
+                    
+                    lemma_synsets.append(synset_count)
+                    lemma_details.append({
+                        'lemma': lemma,
+                        'pos': word.upos,
+                        'synset_count': synset_count
+                    })
         
-        if not tokens:
+        if not lemma_synsets:
             return {
-                'ttr': 0.0,
-                'rttr': 0.0,
-                'cttr': 0.0,
-                'unique_tokens': 0,
-                'total_tokens': 0
+                'polysemy': 0.0,
+                'avg_synsets_per_lemma': 0.0,
+                'max_synsets': 0,
+                'min_synsets': 0,
+                'std_synsets': 0.0,
+                'monosemous_ratio': 0.0,  
+                'polysemous_ratio': 0.0,  
+                'high_polysemy_ratio': 0.0,  
+                'total_lemmas': 0,
+                'lemmas_with_synsets': 0
             }
         
-        unique_tokens = len(set(tokens))
-        total_tokens = len(tokens)
+        # Calculate statistics
+        polysemy_score = np.mean(lemma_synsets)
+        synsets_array = np.array(lemma_synsets)
         
-        ttr = unique_tokens / total_tokens
-        rttr = unique_tokens / np.sqrt(total_tokens)
-        cttr = unique_tokens / np.sqrt(2 * total_tokens)
+        # Count different categories
+        monosemous = np.sum(synsets_array == 1)
+        polysemous = np.sum(synsets_array > 1)
+        high_polysemy = np.sum(synsets_array > 5)
+        with_synsets = np.sum(synsets_array > 0)
+        total = len(lemma_synsets)
         
         return {
-            'ttr': float(ttr),
-            'rttr': float(rttr),
-            'cttr': float(cttr),
-            'unique_tokens': unique_tokens,
-            'total_tokens': total_tokens
+            'polysemy': float(polysemy_score),
+            'avg_synsets_per_lemma': float(polysemy_score),
+            'max_synsets': int(np.max(synsets_array)),
+            'min_synsets': int(np.min(synsets_array)),
+            'std_synsets': float(np.std(synsets_array)),
+            'monosemous_ratio': monosemous / total,  
+            'polysemous_ratio': polysemous / total,  
+            'high_polysemy_ratio': high_polysemy / total,  
+            'total_lemmas': total,
+            'lemmas_with_synsets': int(with_synsets)
         }
+    
+    def lexical_richness(self) -> Dict[str, float]:
+        """
+        Calculate lexical richness metrics using lexical_richness library.
+        Includes: TTR, RTTR, CTTR, MSTTR, MATTR, HD-D, MTLD, and more.
+        
+        Returns:
+            Dictionary with comprehensive richness metrics
+        """
+        if self.text is None:
+            raise ValueError("No document processed. Call process_text() first.")
+        
+        try:
+            # Initialize LexicalRichness with the text
+            lex = LexicalRichness(self.text)
+            
+            # Calculate various metrics
+            metrics = {
+                # Basic metrics
+                'ttr': lex.ttr,  # Type-Token Ratio
+                'rttr': lex.rttr,  # Root TTR
+                'cttr': lex.cttr,  # Corrected TTR
+                'Herdan': lex.Herdan,  # Herdan's C
+                'Summer': lex.Summer,  # Summer's S
+                'Dugast': lex.Dugast,  # Dugast's U
+                'Maas': lex.Maas,  # Maas's a²
+                
+                # Advanced metrics
+                'msttr': lex.msttr(segment_window=100),  # Mean-Segmental TTR
+                'mattr': lex.mattr(window_size=100),  # Moving-Average TTR
+                'hdd': lex.hdd(draws=42),  # HD-D (vocd-D)
+                'mtld': lex.mtld(threshold=0.72),  # MTLD
+                
+                # Word statistics
+                'terms': lex.terms,  # Unique words
+                'words': lex.words,  # Total words
+            }
+            
+            return {k: float(v) if v is not None else 0.0 for k, v in metrics.items()}
+            
+        except Exception as e:
+            # Fallback to basic metrics if library fails
+            print(f"Warning: lexical_richness library failed ({e}). Using basic metrics.")
+            
+            tokens = []
+            for sent in self.doc.sentences:
+                for word in sent.words:
+                    if word.upos not in ['PUNCT', 'SYM', 'X'] and word.text.isalpha():
+                        tokens.append(word.text.lower())
+            
+            if not tokens:
+                return {
+                    'ttr': 0.0,
+                    'rttr': 0.0,
+                    'cttr': 0.0,
+                    'terms': 0,
+                    'words': 0
+                }
+            
+            unique_tokens = len(set(tokens))
+            total_tokens = len(tokens)
+            
+            ttr = unique_tokens / total_tokens
+            rttr = unique_tokens / np.sqrt(total_tokens)
+            cttr = unique_tokens / np.sqrt(2 * total_tokens)
+            
+            return {
+                'ttr': float(ttr),
+                'rttr': float(rttr),
+                'cttr': float(cttr),
+                'terms': unique_tokens,
+                'words': total_tokens
+            }
     
     def get_all_metrics(self) -> Dict:
         """
@@ -246,5 +376,6 @@ class SyntacticAnalyzer:
             'shannon_entropy': self.shannon_entropy(),
             'pos_features': self.pos_features(),
             'vocabulary_complexity': self.vocabulary_complexity(),
+            'polysemy': self.polysemy(),
             'lexical_richness': self.lexical_richness()
         }
